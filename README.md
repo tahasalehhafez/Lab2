@@ -6,10 +6,10 @@ Northline Shop is an online retailer in Riyadh. One legacy system from 2011, **N
 |---|---|
 | **Runtime** | Docker Desktop only — nothing else is installed on your machine |
 | **Audience** | Engineers following Day 0 + Day 1 of the Northline lab |
-| **OS** | Windows PowerShell (copy one section at a time) |
+| **OS** | Windows (PowerShell) · macOS (Terminal / zsh) |
 
-> **Do not paste this entire file into PowerShell.**  
-> Run each command block below, section by section, from top to bottom.
+> **Pick your OS for each section.**  
+> Do not paste this entire file into a terminal. Run one block at a time, from top to bottom.
 
 ---
 
@@ -55,11 +55,24 @@ DATABASE_URL=postgres://admin:${DB_PASSWORD}@db.northline.local:5432/shop
 
 ## Day 0 + Day 1 commands
 
-All commands below are for **Windows PowerShell**. Copy one block at a time.
+Every section has **two tabs of commands**:
+
+| Label | Use this if… |
+|-------|----------------|
+| **Windows** | You are on Windows — copy into **PowerShell** |
+| **macOS** | You are on a Mac — copy into **Terminal** (zsh/bash) |
+
+Docker commands that are identical on both platforms are shown once under **Both platforms**.
 
 ---
 
 ### A — Install tools
+
+<table>
+<tr>
+<td width="50%" valign="top">
+
+#### Windows
 
 ```powershell
 winget --version
@@ -71,8 +84,32 @@ winget install --id EclipseAdoptium.Temurin.21.JDK --accept-source-agreements --
 winget install --id jqlang.jq --accept-source-agreements --accept-package-agreements
 ```
 
+</td>
+<td width="50%" valign="top">
+
+#### macOS
+
+```bash
+# Install Homebrew if you do not have it yet
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+brew --version
+
+brew install --cask docker
+brew install git
+brew install --cask visual-studio-code
+brew install --cask temurin@21
+brew install jq
+```
+
+</td>
+</tr>
+</table>
+
 <details>
 <summary>Troubleshooting</summary>
+
+**Windows**
 
 - **winget missing** → Microsoft Store → *App Installer* → Install/Update, or open [aka.ms/getwinget](https://aka.ms/getwinget). Then close PowerShell and open a new one.
 - **Docker asks for WSL** → run PowerShell as Administrator, then:
@@ -83,11 +120,23 @@ winget install --id jqlang.jq --accept-source-agreements --accept-package-agreem
 
   Restart the PC afterwards.
 
+**macOS**
+
+- After installing Homebrew on Apple Silicon, follow the “Next steps” it prints (usually adding `brew` to your `PATH`), then open a **new** Terminal window.
+- After installing Docker Desktop, open it once from Applications and finish the first-run setup.
+- If `code` is not found after installing VS Code: open VS Code → Command Palette → **Shell Command: Install 'code' command in PATH**.
+
 </details>
 
 ---
 
 ### B — Start Docker and prove it works
+
+<table>
+<tr>
+<td width="50%" valign="top">
+
+#### Windows
 
 ```powershell
 Start-Process "$env:ProgramFiles\Docker\Docker\Docker Desktop.exe"
@@ -98,15 +147,33 @@ docker compose version
 docker run --rm alpine echo "Docker works on this laptop"
 ```
 
+</td>
+<td width="50%" valign="top">
+
+#### macOS
+
+```bash
+open -a Docker
+sleep 20
+docker version
+docker --version
+docker compose version
+docker run --rm alpine echo "Docker works on this laptop"
+```
+
+</td>
+</tr>
+</table>
+
 Wait until Docker Desktop shows a green **Engine running** status before continuing.
 
 ---
 
 ### C — Pull images early (optional)
 
-Recommended so later steps are faster:
+Recommended so later steps are faster. **Same commands on Windows and macOS.**
 
-```powershell
+```bash
 docker pull alpine
 docker pull plantuml/plantuml
 docker pull node:20-alpine
@@ -123,6 +190,12 @@ docker pull grafana/k6
 ### D — Create project folders
 
 If you already cloned this repo, you can skip this section — the folders are already present.
+
+<table>
+<tr>
+<td width="50%" valign="top">
+
+#### Windows
 
 ```powershell
 cd $HOME
@@ -145,15 +218,34 @@ Get-ChildItem -Recurse -Directory | Select-Object -ExpandProperty FullName
 docker run --rm -v "${PWD}:/work" -w /work alpine ls -la
 ```
 
+</td>
+<td width="50%" valign="top">
+
+#### macOS
+
+```bash
+cd ~
+pwd
+
+mkdir -p northline-arch
+cd northline-arch
+mkdir -p docs/adr docs/slo api \
+  services/catalog services/checkout services/warehouse \
+  gateway load fitness
+find "$(pwd)" -type d
+
+docker run --rm -v "${PWD}:/work" -w /work alpine ls -la
+```
+
+</td>
+</tr>
+</table>
+
 ---
 
 ### E — Create files
 
 Open the project in an editor, then create (or review) these three files:
-
-```powershell
-code .
-```
 
 | File | What it is |
 |------|------------|
@@ -161,13 +253,37 @@ code .
 | `docs/context.puml` | C4 Level 1 system context diagram |
 | `docs/adr/adr-001-catalog-owns-data.md` | First architecture decision |
 
-Or create them with Notepad:
+<table>
+<tr>
+<td width="50%" valign="top">
+
+#### Windows
 
 ```powershell
+code .
+
 notepad README.md
 notepad docs\context.puml
 notepad docs\adr\adr-001-catalog-owns-data.md
 ```
+
+</td>
+<td width="50%" valign="top">
+
+#### macOS
+
+```bash
+code .
+
+# Or open with TextEdit / default editor:
+open -e README.md
+open -e docs/context.puml
+open -e docs/adr/adr-001-catalog-owns-data.md
+```
+
+</td>
+</tr>
+</table>
 
 <details>
 <summary>File contents — context.puml</summary>
@@ -285,6 +401,12 @@ Enforced from Day 5 by the automated check in `fitness/no-shared-db.js`.
 
 Stay inside the `northline-arch` folder, then run:
 
+<table>
+<tr>
+<td width="50%" valign="top">
+
+#### Windows
+
 ```powershell
 docker run --rm -v "${PWD}:/work" -w /work alpine ls docs
 docker run --rm -v "${PWD}:/work" -w /work plantuml/plantuml -tpng docs/context.puml
@@ -292,6 +414,23 @@ docker run --rm -v "${PWD}:/work" -w /work alpine ls -la docs
 Invoke-Item docs\context.png
 docker run --rm -v "${PWD}:/work" -w /work alpine find docs -type f
 ```
+
+</td>
+<td width="50%" valign="top">
+
+#### macOS
+
+```bash
+docker run --rm -v "${PWD}:/work" -w /work alpine ls docs
+docker run --rm -v "${PWD}:/work" -w /work plantuml/plantuml -tpng docs/context.puml
+docker run --rm -v "${PWD}:/work" -w /work alpine ls -la docs
+open docs/context.png
+docker run --rm -v "${PWD}:/work" -w /work alpine find docs -type f
+```
+
+</td>
+</tr>
+</table>
 
 This renders `docs/context.puml` to `docs/context.png` and opens the image.
 
