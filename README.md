@@ -1,40 +1,67 @@
 # Northline Shop — Architecture Modernisation
 
-Northline Shop is an online retailer in Riyadh.
-One old system from 2011, called NorthlineCore, does catalog, cart,
-checkout, stock and shipping. We are splitting it apart, carefully.
+Northline Shop is an online retailer in Riyadh. One legacy system from 2011, **NorthlineCore**, handles catalog, cart, checkout, stock, and shipping. This repo documents how we split that system apart — carefully, one boundary at a time.
 
-## How to run anything here
+| | |
+|---|---|
+| **Runtime** | Docker Desktop only — nothing else is installed on your machine |
+| **Audience** | Engineers following Day 0 + Day 1 of the Northline lab |
+| **OS** | Windows PowerShell (copy one section at a time) |
 
-The only tool you need is Docker Desktop.
-Nothing else is installed on your machine.
+> **Do not paste this entire file into PowerShell.**  
+> Run each command block below, section by section, from top to bottom.
 
-## What lives where
+---
 
-- docs/      diagrams and written decisions
-- api/       the written promise between teams (OpenAPI)
-- services/  the new small services (catalog, checkout, warehouse)
-- gateway/   the traffic policeman that routes old and new
-- load/      the load test
-- fitness/   automatic tests of our architecture rules
+## Table of contents
 
-## Rule we never break
+1. [Repository layout](#repository-layout)
+2. [Security rule](#security-rule-we-never-break)
+3. [Day 0 + Day 1 commands](#day-0--day-1-commands)
+   - [A — Install tools](#a--install-tools)
+   - [B — Start Docker](#b--start-docker-and-prove-it-works)
+   - [C — Pull images](#c--pull-images-early-optional)
+   - [D — Create project folders](#d--create-project-folders)
+   - [E — Create files](#e--create-files)
+   - [F — Render and check](#f--day-1-render-and-check)
+4. [Done checklist](#done-checklist)
 
-No real password, key or token is ever written in a file here.
-We always write a placeholder such as ${DB_PASSWORD} instead.
+---
+
+## Repository layout
+
+| Path | Purpose |
+|------|---------|
+| `docs/` | Diagrams and written decisions |
+| `docs/adr/` | Architecture Decision Records |
+| `docs/slo/` | Service level objectives |
+| `api/` | Shared contracts between teams (OpenAPI) |
+| `services/` | New small services — catalog, checkout, warehouse |
+| `gateway/` | Routes traffic between old and new systems |
+| `load/` | Load tests |
+| `fitness/` | Automated checks for architecture rules |
+
+---
+
+## Security rule we never break
+
+No real password, key, or token is ever written in a file here. Always use a placeholder such as `${DB_PASSWORD}`.
+
+```text
 DATABASE_URL=postgres://admin:${DB_PASSWORD}@db.northline.local:5432/shop
+```
 
-################################################################################
-# NORTHLINE — Day 0 + Day 1 — ALL COMMANDS (Windows PowerShell)
-# Copy blocks one section at a time into PowerShell. Run from top to bottom.
-# Do NOT paste the whole file at once (file contents are not PowerShell).
-################################################################################
+---
 
+## Day 0 + Day 1 commands
 
-#==============================================================================
-# SECTION A — INSTALL TOOLS
-#==============================================================================
+All commands below are for **Windows PowerShell**. Copy one block at a time.
 
+---
+
+### A — Install tools
+
+```powershell
 winget --version
 
 winget install -e --id Docker.DockerDesktop --source winget
@@ -42,34 +69,44 @@ winget install --id Git.Git --accept-source-agreements --accept-package-agreemen
 winget install --id Microsoft.VisualStudioCode --accept-source-agreements --accept-package-agreements
 winget install --id EclipseAdoptium.Temurin.21.JDK --accept-source-agreements --accept-package-agreements
 winget install --id jqlang.jq --accept-source-agreements --accept-package-agreements
+```
 
-# If winget is missing: Microsoft Store → App Installer → Install/Update
-# Or open: https://aka.ms/getwinget
-# Then CLOSE PowerShell and open a NEW one.
+<details>
+<summary>Troubleshooting</summary>
 
-# If Docker asks for WSL (run PowerShell as Administrator):
-# wsl --install
-# Then restart the PC.
+- **winget missing** → Microsoft Store → *App Installer* → Install/Update, or open [aka.ms/getwinget](https://aka.ms/getwinget). Then close PowerShell and open a new one.
+- **Docker asks for WSL** → run PowerShell as Administrator, then:
 
+  ```powershell
+  wsl --install
+  ```
 
-#==============================================================================
-# SECTION B — START DOCKER AND PROVE IT WORKS
-#==============================================================================
+  Restart the PC afterwards.
 
+</details>
+
+---
+
+### B — Start Docker and prove it works
+
+```powershell
 Start-Process "$env:ProgramFiles\Docker\Docker\Docker Desktop.exe"
 Start-Sleep -Seconds 20
 docker version
 docker --version
 docker compose version
 docker run --rm alpine echo "Docker works on this laptop"
+```
 
-# Wait until Docker Desktop shows green "Engine running" before continuing.
+Wait until Docker Desktop shows a green **Engine running** status before continuing.
 
+---
 
-#==============================================================================
-# SECTION C — PULL IMAGES EARLY (optional but recommended)
-#==============================================================================
+### C — Pull images early (optional)
 
+Recommended so later steps are faster:
+
+```powershell
 docker pull alpine
 docker pull plantuml/plantuml
 docker pull node:20-alpine
@@ -77,12 +114,17 @@ docker pull docker.redpanda.com/redpandadata/redpanda:latest
 docker pull redis:7-alpine
 docker pull nginx:alpine
 docker pull grafana/k6
+```
 
+> Tip: the image name is `alpine` — not `alpino`.
 
-#==============================================================================
-# SECTION D — CREATE PROJECT FOLDERS
-#==============================================================================
+---
 
+### D — Create project folders
+
+If you already cloned this repo, you can skip this section — the folders are already present.
+
+```powershell
 cd $HOME
 Get-Location
 
@@ -101,52 +143,38 @@ New-Item -ItemType Directory -Force -Path "fitness" | Out-Null
 Get-ChildItem -Recurse -Directory | Select-Object -ExpandProperty FullName
 
 docker run --rm -v "${PWD}:/work" -w /work alpine ls -la
+```
 
+---
 
-#==============================================================================
-# SECTION E — CREATE FILES
-# Run each notepad line, paste the matching content below, Save, close.
-# Or open VS Code with:  code .
-#==============================================================================
+### E — Create files
 
+Open the project in an editor, then create (or review) these three files:
+
+```powershell
+code .
+```
+
+| File | What it is |
+|------|------------|
+| `README.md` | This document |
+| `docs/context.puml` | C4 Level 1 system context diagram |
+| `docs/adr/adr-001-catalog-owns-data.md` | First architecture decision |
+
+Or create them with Notepad:
+
+```powershell
 notepad README.md
 notepad docs\context.puml
 notepad docs\adr\adr-001-catalog-owns-data.md
+```
 
+<details>
+<summary>File contents — context.puml</summary>
 
-# ----- FILE 1: README.md -----
-# Paste everything between the lines into README.md
-# ---------- START README.md ----------
-# Northline Shop — Architecture Modernisation
+Paste into `docs/context.puml`:
 
-Northline Shop is an online retailer in Riyadh.
-One old system from 2011, called NorthlineCore, does catalog, cart,
-checkout, stock and shipping. We are splitting it apart, carefully.
-
-## How to run anything here
-
-The only tool you need is Docker Desktop.
-Nothing else is installed on your machine.
-
-## What lives where
-
-- docs/      diagrams and written decisions
-- api/       the written promise between teams (OpenAPI)
-- services/  the new small services (catalog, checkout, warehouse)
-- gateway/   the traffic policeman that routes old and new
-- load/      the load test
-- fitness/   automatic tests of our architecture rules
-
-## Rule we never break
-
-No real password, key or token is ever written in a file here.
-We always write a placeholder such as ${DB_PASSWORD} instead.
-# ---------- END README.md ----------
-
-
-# ----- FILE 2: docs/context.puml -----
-# Paste everything between the lines into docs/context.puml
-# ---------- START context.puml ----------
+```plantuml
 ' Everything after a single quote is a comment. PlantUML ignores it.
 ' A diagram always starts with @startuml and a name.
 @startuml context
@@ -185,12 +213,16 @@ Rel(northline_core, erp, "Sends the daily sales file", "SFTP, nightly")
 
 ' Every diagram must be closed with @enduml.
 @enduml
-# ---------- END context.puml ----------
+```
 
+</details>
 
-# ----- FILE 3: docs/adr/adr-001-catalog-owns-data.md -----
-# Paste everything between the lines into docs/adr/adr-001-catalog-owns-data.md
-# ---------- START adr-001-catalog-owns-data.md ----------
+<details>
+<summary>File contents — ADR-001</summary>
+
+Paste into `docs/adr/adr-001-catalog-owns-data.md`:
+
+```markdown
 # ADR-001: The Catalog service owns product data
 
 Date: 2026-03-02
@@ -243,26 +275,34 @@ What gets worse:
 Accepted.
 
 Enforced from Day 5 by the automated check in `fitness/no-shared-db.js`.
-# ---------- END adr-001-catalog-owns-data.md ----------
+```
 
+</details>
 
-#==============================================================================
-# SECTION F — DAY 1 RENDER AND CHECK
-# Make sure you are still inside the northline-arch folder.
-#==============================================================================
+---
 
+### F — Day 1 render and check
+
+Stay inside the `northline-arch` folder, then run:
+
+```powershell
 docker run --rm -v "${PWD}:/work" -w /work alpine ls docs
 docker run --rm -v "${PWD}:/work" -w /work plantuml/plantuml -tpng docs/context.puml
 docker run --rm -v "${PWD}:/work" -w /work alpine ls -la docs
 Invoke-Item docs\context.png
 docker run --rm -v "${PWD}:/work" -w /work alpine find docs -type f
+```
 
+This renders `docs/context.puml` to `docs/context.png` and opens the image.
 
-#==============================================================================
-# DONE — you should see these files:
-#   docs/context.puml
-#   docs/context.png
-#   docs/adr/adr-001-catalog-owns-data.md
-#
-# TIP: image name is alpine (NOT alpino)
-#==============================================================================
+---
+
+## Done checklist
+
+You should have these files:
+
+- [x] `docs/context.puml`
+- [x] `docs/context.png`
+- [x] `docs/adr/adr-001-catalog-owns-data.md`
+
+Next: continue with Day 2 once the context diagram opens cleanly on your machine.
