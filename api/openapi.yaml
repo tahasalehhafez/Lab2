@@ -1,0 +1,86 @@
+openapi: 3.0.3
+info:
+  title: Northline Catalog API
+  version: 1.0.0
+  description: Read-only questions about the products Northline sells.
+
+servers:
+  - url: http://localhost:8080
+    description: Local lab machine
+
+
+paths:
+   /v1/items/{id}:
+    get:
+      operationId: getItemById
+      summary: Get one product by its sku
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The permanent product code  NL-LAMP-07
+          schema: 
+            type: string
+
+
+    responses:
+      200:
+        description: The product was found and returned
+        content:
+          application/json:
+            schema:
+              type: object
+              required:[sku,name,price_sar,in_stock]
+              properties:
+                sku:
+                  type: string
+                  description: The permanent product code
+                  example: NL-LAMP-07
+                name:
+                  type: string
+                  example: Riyadh reading lamp
+                price_sar:
+                  type: number
+                  description: The list price in Saudi Riyal  
+                  example: 100.00
+                in_stock: 
+                  type: integer
+                  description: The number of items in stock 
+                  example: 42
+      
+      404:
+        description: The product was not found
+        content:
+          application/json:
+            schema:
+              type: object
+              required:[error , message]
+              properties:
+                error:
+                  type: string
+                  enum: [NOT_FOUND]
+                  example: NOT_FOUND
+                message:
+                  type: string
+                  description: The error message
+                  example: Product not found
+
+
+  /health:
+    get:
+      operationId: getHealth
+      summary: Check the health of the API
+      responses:
+        200:
+          description: The API is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                required:[status]
+                properties:
+                  status:
+                    type: string
+                    enum: [OK]
+                    example: OK
+     
