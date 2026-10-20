@@ -445,3 +445,22 @@ You should have these files:
 - [x] `docs/adr/adr-001-catalog-owns-data.md`
 
 Next: continue with Day 2 once the context diagram opens cleanly on your machine.
+
+
+// ports
+charge(amount) -> PaymentResult
+
+
+// adapter 
+class BankAAdapter:
+    def charge(self, amount):
+        response = bank_a_api.pay(amount)
+        return convert_to_payment_result(response)
+
+
+{
+  "eventId": "evt-789",
+  "type": "OrderConfirmed",
+  "orderId": "ORD-123",
+  "customerId": "C-55"
+}
