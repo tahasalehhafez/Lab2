@@ -464,3 +464,5 @@ class BankAAdapter:
   "orderId": "ORD-123",
   "customerId": "C-55"
 }
+
+docker run --rm -v "${PWD}:/work" -w /work node:20-alpine node services/checkout/order-service-before.js
