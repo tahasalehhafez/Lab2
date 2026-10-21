@@ -1,8 +1,10 @@
 # ADR-001: The Catalog service owns product data
+
 Date: 2026-03-02
 Deciders: Head of Engineering, Lead Architect, Catalog Team Lead
 
 ## Context
+
 NorthlineCore is one program written in 2011. Every part of it reads and
 writes the same database tables directly.
 
@@ -17,13 +19,14 @@ clearest boundary.
 
 We cannot split anything while four teams write to the same table.
 
-
 ## Decision
+
 The Catalog service is the only component allowed to read or write the
 product tables. Every other component must ask the Catalog service through
 its published API. No other service connects to the catalog database.
 
 ## Consequences
+
 What gets better:
 
 - One team owns the product data model. Changes are safe to review.
@@ -42,9 +45,8 @@ What gets worse:
 - The migration is not free. Three call sites in NorthlineCore must be
   rewritten before we can enforce the rule.
 
-
 ## Status
 
 Accepted.
 
-Enforced from Day 3 by the automated check in `fitness/no-shared-db.js`.
+Enforced from Day 5 by the automated check in `fitness/no-shared-db.js`.

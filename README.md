@@ -461,9 +461,16 @@ The warehouse log after the restart should show the events that arrived while it
 
 ## Day 4 — Scale and survive
 
-Files: catalog cart code, Redis in `docker-compose.yml`, `load/checkout-load.js`, `docs/slo/checkout-slo.md`.
+Files already in this repo, at the end-of-day state:
 
-### 4.1 Three catalog copies
+- `services/catalog/package.json` and `services/catalog/server.js` — cart, `/health`, `/ready`, timeout, circuit breaker
+- `docker-compose.yml` — three catalog ports, Redis, Redpanda, warehouse, checkout profile
+- `load/checkout-load.js`
+- `docs/slo/checkout-slo.md`
+
+`SESSION_STORE` is already `"redis"`. To watch the empty-cart failure first, change that one line to `"memory"`, run 4.1, then set it back to `"redis"` before 4.2.
+
+### 4.1 Three catalog copies, then lose a cart
 
 **Both**
 
@@ -473,11 +480,43 @@ docker compose up -d --build --scale catalog=3
 docker compose ps
 ```
 
-You should see three catalog rows.
+You should see three catalog rows: ports **8080**, **8081**, and **8082**, plus Redis, Redpanda, and warehouse.
 
-### 4.2 Shared session in Redis
+Add a lamp on copy one, then read the same cart on copy two. With `SESSION_STORE=memory` the second cart is empty and `served_by` changes. With `SESSION_STORE=redis` the lamp is still there.
 
-After the catalog containers are set to use Redis:
+<table>
+<tr>
+<td width="50%" valign="top">
+
+#### Windows
+
+```powershell
+curl.exe http://localhost:8080/v1/cart/sara/add/NL-LAMP-07
+curl.exe http://localhost:8081/v1/cart/sara
+```
+
+</td>
+<td width="50%" valign="top">
+
+#### macOS
+
+```bash
+curl http://localhost:8080/v1/cart/sara/add/NL-LAMP-07
+curl http://localhost:8081/v1/cart/sara
+```
+
+</td>
+</tr>
+</table>
+
+### 4.2 Move the cart to Redis and prove three copies share it
+
+In `docker-compose.yml`, inside the catalog `environment` block:
+
+```yaml
+      # Carts now live in Redis, so every copy sees the same cart.
+      SESSION_STORE: "redis"
+```
 
 **Both**
 
@@ -485,6 +524,37 @@ After the catalog containers are set to use Redis:
 docker compose up -d --scale catalog=3
 docker compose logs --tail 6 catalog
 ```
+
+Each copy should log `"store":"redis"`.
+
+<table>
+<tr>
+<td width="50%" valign="top">
+
+#### Windows
+
+```powershell
+curl.exe http://localhost:8080/v1/cart/sara/add/NL-LAMP-07
+curl.exe http://localhost:8081/v1/cart/sara/add/NL-CUSHION-01
+curl.exe http://localhost:8082/v1/cart/sara
+```
+
+</td>
+<td width="50%" valign="top">
+
+#### macOS
+
+```bash
+curl http://localhost:8080/v1/cart/sara/add/NL-LAMP-07
+curl http://localhost:8081/v1/cart/sara/add/NL-CUSHION-01
+curl http://localhost:8082/v1/cart/sara
+```
+
+</td>
+</tr>
+</table>
+
+The third answer lists both items. `added_by` shows different copies touched one cart.
 
 ### 4.3 Scale down, keep the cart, scale up
 

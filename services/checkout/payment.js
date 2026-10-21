@@ -12,27 +12,27 @@
 
 // Our first provider. It pretends to talk to a real card company.
 const cardPayment = {
-    // A friendly name, so logs and tests can say which provider ran.
-    name: "card",
-  
-    // Take the money. Two inputs: the amount in SAR, and a safe card token.
-    capture: function (amountSar, cardToken) {
-      // Print exactly what a real provider would confirm back to us.
-      console.log("[payment] captured " + amountSar.toFixed(2) + " SAR with card token " + cardToken);
-      // Return a receipt id. The caller can store this to prove payment happened.
-      return "rcpt_" + cardToken;
-    }
-  };
-  
-  // A second provider, to prove the point. It follows the same shape.
-  // We do not use it today, but adding it needed zero changes elsewhere.
-  const bankTransferPayment = {
-    name: "bank-transfer",
-    capture: function (amountSar, reference) {
-      console.log("[payment] awaiting bank transfer of " + amountSar.toFixed(2) + " SAR, reference " + reference);
-      return "bank_" + reference;
-    }
-  };
-  
-  // module.exports makes these objects available to other files.
-  module.exports = { cardPayment: cardPayment, bankTransferPayment: bankTransferPayment };
+  // A friendly name, so logs and tests can say which provider ran.
+  name: "card",
+
+  // Take the money. Two inputs: the amount in SAR, and a safe card token.
+  capture: function (amountSar, cardToken) {
+    // Print exactly what a real provider would confirm back to us.
+    console.log("[payment] captured " + amountSar.toFixed(2) + " SAR with card token " + cardToken);
+    // Return a receipt id. The caller can store this to prove payment happened.
+    return "rcpt_" + cardToken;
+  }
+};
+
+// A second provider, to prove the point. It follows the same shape.
+// We do not use it today, but adding it needed zero changes elsewhere.
+const bankTransferPayment = {
+  name: "bank-transfer",
+  capture: function (amountSar, reference) {
+    console.log("[payment] awaiting bank transfer of " + amountSar.toFixed(2) + " SAR, reference " + reference);
+    return "bank_" + reference;
+  }
+};
+
+// module.exports makes these objects available to other files.
+module.exports = { cardPayment: cardPayment, bankTransferPayment: bankTransferPayment };

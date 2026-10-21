@@ -1,11 +1,15 @@
 # Northline Shop - Context Map
+
 A bounded context is a boundary where one word has exactly one meaning.
 Two contexts may use the same word differently. That is fine, as long as
 we write it down here and translate at the border.
 
 We start with two contexts. More will follow later.
 
+---
+
 ## Context 1: Catalog
+
 Owner: Catalog Team
 Purpose: describe what we sell.
 
@@ -19,6 +23,8 @@ What Catalog promises to others:
 
 - `GET /v1/items/{id}` returns the item or a clear 404.
 - The `sku` never changes for the life of the product.
+
+---
 
 ## Context 2: Checkout
 
@@ -62,9 +68,6 @@ Rule: whenever these two numbers appear in the same conversation, we say
 ## Relationship type
 
 Catalog is upstream. Checkout is downstream.
-
 Checkout adapts to Catalog through the published API contract in
-`api/openapi.yaml`.
-
- Catalog does not change that contract without a
+`api/openapi.yaml`. Catalog does not change that contract without a
 version bump and four weeks of notice.
