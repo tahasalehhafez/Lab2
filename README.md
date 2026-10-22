@@ -45,6 +45,7 @@ Northline Shop is an online retailer in Riyadh. One legacy system from 2011, **N
 | `load/` | k6 load test | 4 |
 | `fitness/` | Automated architecture rule | 5 |
 | `docker-compose.yml` | Starts the whole system | 3–5 |
+| `Presentation - Software Architecture & Solution Design (5 Days).pptx` | Course slides | — |
 
 ---
 
@@ -680,7 +681,15 @@ This takes about 60 seconds. The network name ends with `_default`. If `docker n
 
 ## Day 5 — Modernise and govern
 
-Files: `gateway/nginx.conf`, `gateway/legacy.conf`, `fitness/no-shared-db.js`.
+Files already in this repo, at the end-of-day state:
+
+- `gateway/nginx.conf` — `/v1/items/` goes to Catalog, everything else goes to the old system
+- `gateway/legacy.conf` — stand-in for NorthlineCore
+- `services/catalog/db.js` — catalog data module protected by ADR-001
+- `services/warehouse/stock-report.js` — asks Catalog over HTTP (the fixed version)
+- `fitness/no-shared-db.js` — fails the build if one service imports another service’s files
+
+`nginx.conf` is the live Strangler route, not the rollback. `stock-report.js` is the fixed version, so the fitness test passes.
 
 ### 5.1 Start the gateway and prove the route
 
@@ -691,6 +700,8 @@ docker compose up -d --scale catalog=3
 docker compose ps
 ```
 
+You should see `northline-gateway` on port **8000** and `northline-legacy`.
+
 <table>
 <tr>
 <td width="50%" valign="top">
@@ -699,10 +710,11 @@ docker compose ps
 
 ```powershell
 curl.exe -i http://localhost:8000/v1/items/NL-LAMP-07
+curl.exe -i http://localhost:8000/v1/items/NL-NOPE-99
 curl.exe -i http://localhost:8000/cart
+curl.exe -i http://localhost:8000/checkout
+curl.exe -i http://localhost:8000/anything/at/all
 ```
-
-`/v1/items/...` is the new catalog. `/cart` is still the old system. The response headers show which route answered.
 
 </td>
 <td width="50%" valign="top">
@@ -711,18 +723,27 @@ curl.exe -i http://localhost:8000/cart
 
 ```bash
 curl -i http://localhost:8000/v1/items/NL-LAMP-07
+curl -i http://localhost:8000/v1/items/NL-NOPE-99
 curl -i http://localhost:8000/cart
+curl -i http://localhost:8000/checkout
+curl -i http://localhost:8000/anything/at/all
 ```
-
-`/v1/items/...` is the new catalog. `/cart` is still the old system. The response headers show which route answered.
 
 </td>
 </tr>
 </table>
 
-### 5.2 Undo in one reload
+Look at `X-Northline-Route`. Product paths say `new-catalog` (the missing sku is still Catalog, with a 404). `/cart`, `/checkout`, and any other path say `legacy-core`.
 
-After you point the product route back at the old system in `gateway/nginx.conf`:
+### 5.2 Undo in one reload, then put it back
+
+In `gateway/nginx.conf`, inside `location /v1/items/`, change the route for the demo:
+
+```nginx
+    # ROLLBACK: send this path back to the old system.
+    proxy_pass http://old_core;
+    add_header X-Northline-Route "legacy-core-rollback" always;
+```
 
 **Both**
 
@@ -731,6 +752,8 @@ docker compose exec gateway nginx -t
 docker compose exec gateway nginx -s reload
 ```
 
+`nginx -t` must say the config is ok before `reload`.
+
 <table>
 <tr>
 <td width="50%" valign="top">
@@ -754,11 +777,11 @@ curl -i http://localhost:8000/v1/items/NL-LAMP-07
 </tr>
 </table>
 
-`nginx -t` must say the config is ok before `reload`. The product path now answers from the old system.
+The header is `legacy-core-rollback` and the body is the old system. Then change `proxy_pass` back to `http://new_catalog` and the header back to `"new-catalog"`, and run `nginx -t` and `nginx -s reload` again. The file in this repo is already that restored route.
 
 ### 5.3 Fitness function: fail, fix, pass
 
-The first run is expected to fail while the bad import is still in the warehouse file.
+The committed `stock-report.js` already calls the Catalog API, so this test passes. To see the failure first, temporarily replace the HTTP call with `const catalogDb = require("../catalog/db");`, run the test, then restore the HTTP version.
 
 **Both**
 
